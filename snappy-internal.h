@@ -53,14 +53,10 @@
 #define SNAPPY_HAVE_RVV 0
 #endif
 
-#ifdef SNAPPY_RVV_1
+#if SNAPPY_RVV_1 || SNAPPY_RVV_0_7
 #define VSETVL_E8M2 __riscv_vsetvl_e8m2
 #define VLE8_V_U8M2 __riscv_vle8_v_u8m2
 #define VSE8_V_U8M2 __riscv_vse8_v_u8m2
-#elif SNAPPY_RVV_0_7
-#define VSETVL_E8M2 vsetvl_e8m2
-#define VLE8_V_U8M2 vle8_v_u8m2
-#define VSE8_V_U8M2 vse8_v_u8m2
 #endif
 
 #if SNAPPY_HAVE_SSSE3 || SNAPPY_HAVE_NEON
