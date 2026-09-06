@@ -1889,7 +1889,10 @@ static size_t InternalCompress(Source* reader, Sink* writer,
   assert(options.level == 1 || options.level == 2);
   size_t written = 0;
   size_t N = reader->Available();
-  assert(N <= 0xFFFFFFFFu);
+  // The uncompressed length is a 32-bit varint in the stream format.
+  if (static_cast<uint64_t>(N) > std::numeric_limits<uint32_t>::max()) {
+    return 0;
+  }
   char ulength[Varint::kMax32];
   char* p = Varint::Encode32(ulength, N);
   writer->Append(ulength, p - ulength);
