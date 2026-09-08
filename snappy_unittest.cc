@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <cstdint>
 #include <cmath>
 #include <cstdlib>
 #include <random>
@@ -646,6 +647,70 @@ TEST(Snappy, CompressionContextStaticWorkspace) {
   b.resize(b_len);
   EXPECT_EQ(a, b);
 }
+
+// An input of 2^32 bytes or more cannot be expressed by the stream format and
+// must be refused rather than compressed under a truncated length.
+#if SIZE_MAX > 0xFFFFFFFFu
+
+// Reports an arbitrary number of bytes available without materializing them.
+class OversizedSource : public Source {
+ public:
+  explicit OversizedSource(uint64_t total)
+      : left_(total), buf_(1 << 16, 'a') {}
+  size_t Available() const override { return static_cast<size_t>(left_); }
+  const char* Peek(size_t* len) override {
+    *len = static_cast<size_t>(std::min<uint64_t>(left_, buf_.size()));
+    return buf_.data();
+  }
+  void Skip(size_t n) override { left_ -= n; }
+
+ private:
+  uint64_t left_;
+  std::string buf_;
+};
+
+// Counts every appended byte and keeps the first few, which is where the
+// uncompressed-length varint lives.
+class CountingSink : public Sink {
+ public:
+  void Append(const char* data, size_t n) override {
+    for (size_t i = 0; i < n && head_.size() < 8; ++i) head_.push_back(data[i]);
+    total_ += n;
+  }
+
+  std::string head_;
+  uint64_t total_ = 0;
+};
+
+// Decodes the uncompressed-length varint a compressed stream starts with.
+uint32_t DeclaredLength(const std::string& stream) {
+  uint32_t result = 0;
+  int shift = 0;
+  for (size_t i = 0; i < stream.size(); ++i) {
+    const unsigned char c = static_cast<unsigned char>(stream[i]);
+    result |= static_cast<uint32_t>(c & 0x7f) << shift;
+    if (c < 128) break;
+    shift += 7;
+  }
+  return result;
+}
+
+TEST(Snappy, RefusesInputLongerThanTheFormatCanExpress) {
+  OversizedSource too_big(uint64_t{1} << 32);
+  CountingSink refused;
+  EXPECT_EQ(0u, Compress(&too_big, &refused));
+  EXPECT_EQ(0u, refused.total_);
+  EXPECT_TRUE(refused.head_.empty());
+
+  // One byte below that is the largest input the format can express, and it
+  // still compresses to a stream whose header names its real length.
+  OversizedSource largest((uint64_t{1} << 32) - 1);
+  CountingSink accepted;
+  EXPECT_GT(Compress(&largest, &accepted), 0u);
+  EXPECT_EQ(0xFFFFFFFFu, DeclaredLength(accepted.head_));
+}
+
+#endif  // SIZE_MAX > 0xFFFFFFFFu
 
 TEST(Snappy, FourByteOffset) {
   // The new compressor cannot generate four-byte offsets since

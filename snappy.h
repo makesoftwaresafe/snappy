@@ -129,7 +129,7 @@ class WorkingMemory;
   // ------------------------------------------------------------------------
 
   // Compress the bytes read from "*reader" and append to "*writer". Return the
-  // number of bytes written.
+  // number of bytes written, or zero if "*reader" has 2^32 or more bytes.
   // First version is to preserve ABI.
   size_t Compress(Source* reader, Sink* writer);
   size_t Compress(Source* reader, Sink* writer,
@@ -154,7 +154,8 @@ class WorkingMemory;
   // ------------------------------------------------------------------------
 
   // Sets "*compressed" to the compressed version of "input[0..input_length-1]".
-  // Original contents of *compressed are lost.
+  // Original contents of *compressed are lost. Returns zero and writes nothing
+  // if "input_length" is 2^32 or more.
   //
   // REQUIRES: "input[]" is not an alias of "*compressed".
   // First version is to preserve ABI.
@@ -166,7 +167,8 @@ class WorkingMemory;
   // Same as `Compress` above but taking an `iovec` array as input. Note that
   // this function preprocesses the inputs to compute the sum of
   // `iov[0..iov_cnt-1].iov_len` before reading. To avoid this, use
-  // `RawCompressFromIOVec` below.
+  // `RawCompressFromIOVec` below. Returns zero and writes nothing if that sum
+  // is 2^32 or more.
   // First version is to preserve ABI.
   size_t CompressFromIOVec(const struct iovec* iov, size_t iov_cnt,
                            std::string* compressed);
@@ -207,6 +209,9 @@ class WorkingMemory;
   // Takes the data stored in "input[0..input_length]" and stores
   // it in the array pointed to by "compressed".
   //
+  // "*compressed_length" is set to the length of the compressed output, or to
+  // zero, with nothing written, if "input_length" is 2^32 or more.
+  //
   // "*compressed_length" is set to the length of the compressed output.
   //
   // Example:
@@ -228,7 +233,9 @@ class WorkingMemory;
 
   // Same as `RawCompress` above but taking an `iovec` array as input. Note that
   // `uncompressed_length` is the total number of bytes to be read from the
-  // elements of `iov` (_not_ the number of elements in `iov`).
+  // elements of `iov` (_not_ the number of elements in `iov`). Sets
+  // "*compressed_length" to zero and writes nothing if `uncompressed_length`
+  // is 2^32 or more.
   // First version is to preserve ABI.
   void RawCompressFromIOVec(const struct iovec* iov, size_t uncompressed_length,
                             char* compressed, size_t* compressed_length);
