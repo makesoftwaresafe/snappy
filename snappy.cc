@@ -76,7 +76,6 @@
 #include <cstring>
 #include <limits>
 #include <memory>
-#include <new>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1889,10 +1888,7 @@ static size_t InternalCompress(Source* reader, Sink* writer,
   assert(options.level == 1 || options.level == 2);
   size_t written = 0;
   size_t N = reader->Available();
-  // The uncompressed length is a 32-bit varint in the stream format.
-  if (static_cast<uint64_t>(N) > std::numeric_limits<uint32_t>::max()) {
-    return 0;
-  }
+  assert(N <= 0xFFFFFFFFu);
   char ulength[Varint::kMax32];
   char* p = Varint::Encode32(ulength, N);
   writer->Append(ulength, p - ulength);
@@ -2469,17 +2465,6 @@ void RawCompress(const char* input, size_t input_length, char* compressed,
   *compressed_length = (writer.CurrentDestination() - compressed);
 }
 
-void RawCompress(const char* input, size_t input_length, char* compressed,
-                 size_t* compressed_length, CompressionOptions options,
-                 CompressionContext* ctx) {
-  ByteArraySource reader(input, input_length);
-  UncheckedByteArraySink writer(compressed);
-  Compress(&reader, &writer, options, ctx);
-
-  // Compute how many bytes were added
-  *compressed_length = (writer.CurrentDestination() - compressed);
-}
-
 void RawCompressFromIOVec(const struct iovec* iov, size_t uncompressed_length,
                           char* compressed, size_t* compressed_length) {
   RawCompressFromIOVec(iov, uncompressed_length, compressed, compressed_length,
@@ -2495,6 +2480,17 @@ void RawCompressFromIOVec(const struct iovec* iov, size_t uncompressed_length,
 
   // Compute how many bytes were added.
   *compressed_length = writer.CurrentDestination() - compressed;
+}
+
+void RawCompress(const char* input, size_t input_length, char* compressed,
+                 size_t* compressed_length, CompressionOptions options,
+                 CompressionContext* ctx) {
+  ByteArraySource reader(input, input_length);
+  UncheckedByteArraySink writer(compressed);
+  Compress(&reader, &writer, options, ctx);
+
+  // Compute how many bytes were added
+  *compressed_length = (writer.CurrentDestination() - compressed);
 }
 
 size_t Compress(const char* input, size_t input_length,

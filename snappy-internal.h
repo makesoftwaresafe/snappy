@@ -157,7 +157,7 @@ class WorkingMemory {
  private:
   char* mem_;        // the allocated memory, never nullptr
   size_t size_;      // the size of the allocated memory, never 0
-  bool owns_mem_;    // whether the destructor should free mem_
+  bool owns_mem_;
   uint16_t* table_;  // the pointer to the hashtable
   char* input_;      // the pointer to the input scratch buffer
   char* output_;     // the pointer to the output scratch buffer

@@ -39,9 +39,6 @@ snappy_status snappy_compress(const char* input,
     return SNAPPY_BUFFER_TOO_SMALL;
   }
   snappy::RawCompress(input, input_length, compressed, compressed_length);
-  if (*compressed_length == 0) {
-    return SNAPPY_INVALID_INPUT;
-  }
   return SNAPPY_OK;
 }
 

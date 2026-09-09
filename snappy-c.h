@@ -59,9 +59,6 @@ typedef enum {
  * <compressed_length> contains the true length of the compressed output,
  * and SNAPPY_OK is returned.
  *
- * An <input_length> of 2^32 or more returns SNAPPY_INVALID_INPUT with
- * <compressed_length> set to 0 and nothing written.
- *
  * Example:
  *   size_t output_length = snappy_max_compressed_length(input_length);
  *   char* output = (char*)malloc(output_length);
