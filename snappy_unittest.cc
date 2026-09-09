@@ -545,7 +545,7 @@ TEST(Snappy, RandomData) {
 }
 
 TEST(Snappy, CompressionContext) {
-  std::minstd_rand0 rng(absl::GetFlag(FLAGS_test_random_seed));
+  std::minstd_rand0 rng(snappy::GetFlag(FLAGS_test_random_seed));
   std::uniform_int_distribution<int> uniform_byte(0, 255);
 
   // A single context, reused across every compression below.
